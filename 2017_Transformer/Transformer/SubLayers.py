@@ -1,13 +1,15 @@
-''' Define the sublayers in encoder/decoder layer '''
+"""定义编码器/解码器层中的子层"""
+
 import numpy as np
 import torch.nn as nn
 import torch.nn.functional as F
-from transformer.Modules import ScaledDotProductAttention
+from Modules import ScaledDotProductAttention
 
 __author__ = "Yu-Hsiang Huang"
 
+
 class MultiHeadAttention(nn.Module):
-    ''' Multi-Head Attention module '''
+    """多头注意力模块"""
 
     def __init__(self, n_head, d_model, d_k, d_v, dropout=0.1):
         super().__init__()
@@ -21,11 +23,10 @@ class MultiHeadAttention(nn.Module):
         self.w_vs = nn.Linear(d_model, n_head * d_v, bias=False)
         self.fc = nn.Linear(n_head * d_v, d_model, bias=False)
 
-        self.attention = ScaledDotProductAttention(temperature=d_k ** 0.5)
+        self.attention = ScaledDotProductAttention(temperature=d_k**0.5)
 
         self.dropout = nn.Dropout(dropout)
         self.layer_norm = nn.LayerNorm(d_model, eps=1e-6)
-
 
     def forward(self, q, k, v, mask=None):
 
@@ -44,7 +45,7 @@ class MultiHeadAttention(nn.Module):
         q, k, v = q.transpose(1, 2), k.transpose(1, 2), v.transpose(1, 2)
 
         if mask is not None:
-            mask = mask.unsqueeze(1)   # For head axis broadcasting.
+            mask = mask.unsqueeze(1)  # For head axis broadcasting.
 
         q, attn = self.attention(q, k, v, mask=mask)
 
@@ -60,12 +61,12 @@ class MultiHeadAttention(nn.Module):
 
 
 class PositionwiseFeedForward(nn.Module):
-    ''' A two-feed-forward-layer module '''
+    """两层前馈网络模块"""
 
     def __init__(self, d_in, d_hid, dropout=0.1):
         super().__init__()
-        self.w_1 = nn.Linear(d_in, d_hid) # position-wise
-        self.w_2 = nn.Linear(d_hid, d_in) # position-wise
+        self.w_1 = nn.Linear(d_in, d_hid)  # position-wise
+        self.w_2 = nn.Linear(d_hid, d_in)  # position-wise
         self.layer_norm = nn.LayerNorm(d_in, eps=1e-6)
         self.dropout = nn.Dropout(dropout)
 

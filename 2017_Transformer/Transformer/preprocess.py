@@ -1,20 +1,22 @@
-"""Handling the data io"""
-
+"""处理数据输入输出"""
 import os
+import sys
 import argparse
 import logging
 import dill as pickle
 import urllib
 from tqdm import tqdm
-import sys
 import codecs
+
+# 添加父目录到Python路径，以便导入transformer模块
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import spacy
 import torch
 import tarfile
 import torchtext.data
 import torchtext.datasets
 from torchtext.datasets import TranslationDataset
-import transformer.Constants as Constants
+import Constants as Constants
 from learn_bpe import learn_bpe
 from apply_bpe import BPE
 import re

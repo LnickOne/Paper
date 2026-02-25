@@ -4,8 +4,9 @@ import torch.nn.functional as F
 
 __author__ = "Yu-Hsiang Huang"
 
+
 class ScaledDotProductAttention(nn.Module):
-    ''' Scaled Dot-Product Attention '''
+    """缩放点积注意力"""
 
     def __init__(self, temperature, attn_dropout=0.1):
         super().__init__()
