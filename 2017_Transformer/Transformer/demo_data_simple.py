@@ -4,9 +4,10 @@
 """
 
 import json
+import os
 import Constants as Constants
 
-def create_simple_data():
+def create_simple_data(output_path='demo_data_simple.json'):
     """创建简单的JSON格式演示数据"""
 
     # 简单词汇表
@@ -53,7 +54,9 @@ def create_simple_data():
     }
 
     # 保存为JSON
-    with open('demo_data_simple.json', 'w') as f:
+    output_path = os.path.abspath(output_path)
+    os.makedirs(os.path.dirname(output_path), exist_ok=True)
+    with open(output_path, 'w') as f:
         json.dump(data, f, indent=2)
 
     print(f"创建简单演示数据成功:")
@@ -61,6 +64,7 @@ def create_simple_data():
     print(f"- 验证样本: {len(valid_data)}")
     print(f"- 源语言词汇表大小: {settings['src_vocab_size']}")
     print(f"- 目标语言词汇表大小: {settings['trg_vocab_size']}")
+    print(f"- 数据文件: {output_path}")
 
 if __name__ == "__main__":
     create_simple_data()

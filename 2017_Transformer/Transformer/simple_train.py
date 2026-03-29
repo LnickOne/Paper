@@ -16,13 +16,15 @@ from tqdm import tqdm
 # 添加当前目录到Python路径
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
+import config
+
 import Constants as Constants
 from Models import Transformer
 from Optim import ScheduledOptim
 
 # 加载演示数据
 def load_data():
-    with open('demo_data_simple.json', 'r') as f:
+    with open(config.DEMO_DATA_JSON, 'r') as f:
         data = json.load(f)
     return data
 
@@ -85,6 +87,7 @@ def train_model():
         src_pad_idx=data['settings']['src_pad_idx'],
         trg_pad_idx=data['settings']['trg_pad_idx'],
         n_position=100,
+        d_word_vec=64,
         d_model=64,
         d_inner=256,
         n_head=2,
@@ -127,19 +130,24 @@ def train_model():
         print(f'Epoch {epoch} 平均损失: {avg_loss:.4f}')
 
     # 保存模型
-    os.makedirs('output', exist_ok=True)
-    torch.save(model.state_dict(), 'output/simple_model.pth')
-    print("\n模型已保存到 output/simple_model.pth")
+    os.makedirs(config.OUTPUT_BASE, exist_ok=True)
+    output_path = os.path.join(config.OUTPUT_BASE, 'simple_model.pth')
+    torch.save(model.state_dict(), output_path)
+    print(f"\n模型已保存到 {output_path}")
 
     # 测试生成
     print("\n测试生成:")
     model.eval()
     test_src = torch.LongTensor([[4, 5, 6]]).to(device)  # 测试句子
     with torch.no_grad():
-        test_output = model(test_src, None)
+        trg_init = torch.LongTensor([[data['settings']['trg_pad_idx']]]).to(device)
+        test_output = model(test_src, trg_init)
         predicted = torch.argmax(test_output, dim=-1)
         print(f"输入: {test_src}")
         print(f"输出: {predicted}")
 
 if __name__ == "__main__":
+    if not os.path.exists(config.DEMO_DATA_JSON):
+        from demo_data_simple import create_simple_data
+        create_simple_data(config.DEMO_DATA_JSON)
     train_model()

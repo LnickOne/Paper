@@ -1,5 +1,11 @@
 # Large training outputs
 2018_Bert/output/
+Output/
+*/output/
+*/runs/
+*/wandb/
+*/logs/
+*/.cache/
 
 # LLaMA-Factory large assets (moved out of repo)
 2022_Lora/LLaMA-Factory/data/*

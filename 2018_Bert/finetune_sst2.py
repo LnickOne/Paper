@@ -22,10 +22,12 @@ from datasets import load_dataset
 from sklearn.metrics import accuracy_score
 
 # ── 超参数（来自论文 Appendix A.3）──────────────────────────────────────────
-EPOCHS = 3
-BATCH_SIZE = 256
-LEARNING_RATE = 2e-5 * (256 / 32)  # 线性缩放：原论文 batch=256，LR=2e-4
-MAX_SEQ_LEN = 128
+EPOCHS = float(os.environ.get("EPOCHS", "3"))
+BATCH_SIZE = int(os.environ.get("BATCH_SIZE", "256"))
+LEARNING_RATE = float(os.environ.get("LEARNING_RATE", str(2e-5 * (256 / 32))))  # 线性缩放：原论文 batch=256，LR=2e-4
+MAX_SEQ_LEN = int(os.environ.get("MAX_SEQ_LEN", "128"))
+MAX_STEPS = int(os.environ.get("MAX_STEPS", "0"))
+SMOKE_MAX_SAMPLES = int(os.environ.get("SMOKE_MAX_SAMPLES", "0"))
 OUTPUT_DIR = os.path.join(config.OUTPUT_BASE, "sst2")
 LOG_DIR = os.path.join(config.LOG_BASE, "sst2")
 
@@ -35,6 +37,11 @@ dataset = load_dataset(
     "glue",
     "sst2",
 )
+if SMOKE_MAX_SAMPLES > 0:
+    for split in dataset.keys():
+        keep = min(SMOKE_MAX_SAMPLES, len(dataset[split]))
+        dataset[split] = dataset[split].select(range(keep))
+    print(f"SMOKE 模式：每个 split 仅保留前 {SMOKE_MAX_SAMPLES} 条样本")
 print(dataset)
 
 # ── 2. 加载 Tokenizer ────────────────────────────────────────────────────
@@ -83,11 +90,12 @@ training_args = TrainingArguments(
     learning_rate=LEARNING_RATE,
     weight_decay=0.01,
     warmup_steps=79,   # 总步数 ~790 的 10%
-    eval_strategy="epoch",
+    evaluation_strategy="epoch",
     save_strategy="epoch",
     load_best_model_at_end=True,
     metric_for_best_model="accuracy",
     logging_steps=50,
+    max_steps=MAX_STEPS if MAX_STEPS > 0 else -1,
     fp16=True,           # RTX 3090 支持 FP16，加速训练
     report_to="none",
 )
@@ -100,7 +108,7 @@ trainer = Trainer(
     args=training_args,
     train_dataset=tokenized["train"],
     eval_dataset=tokenized["validation"],
-    processing_class=tokenizer,
+    tokenizer=tokenizer,
     data_collator=data_collator,
     compute_metrics=compute_metrics,
 )

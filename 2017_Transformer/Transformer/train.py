@@ -19,10 +19,11 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 import Constants as Constants
 from Models import Transformer
 from Optim import ScheduledOptim
+import config
 
 # 加载演示数据
 def load_data():
-    with open('demo_data_simple.json', 'r') as f:
+    with open(config.DEMO_DATA_JSON, 'r') as f:
         data = json.load(f)
     return data
 
@@ -146,15 +147,16 @@ def train_model():
         print(f'Epoch {epoch+1} 平均损失: {avg_loss:.4f}')
 
     # 保存模型
-    os.makedirs('output', exist_ok=True)
+        os.makedirs(config.OUTPUT_BASE, exist_ok=True)
+    output_path = os.path.join(config.OUTPUT_BASE, 'transformer_model_gpu.pth')
     torch.save({
         'model_state_dict': model.state_dict(),
         'optimizer_state_dict': optimizer.state_dict(),
         'loss': avg_loss,
         'settings': data['settings']
-    }, 'output/transformer_model_gpu.pth')
+    }, output_path)
 
-    print("\n模型已保存到 output/transformer_model_gpu.pth")
+    print(f"\n模型已保存到 {output_path}")
 
     # 测试生成
     print("\n测试生成:")
@@ -188,8 +190,9 @@ def train_model():
 
 if __name__ == "__main__":
     # 生成数据（如果不存在）
-    if not os.path.exists('demo_data_simple.json'):
+    if not os.path.exists(config.DEMO_DATA_JSON):
         print("生成演示数据...")
-        os.system('python demo_data_simple.py')
+        from demo_data_simple import create_simple_data
+        create_simple_data(config.DEMO_DATA_JSON)
 
     train_model()

@@ -26,18 +26,36 @@ from transformers import (
 from datasets import load_dataset
 
 # ── 超参数（来自论文 Appendix A.3）──────────────────────────────────────────
-EPOCHS = 2
-BATCH_SIZE = 128          # 线性缩放：原32 → 128（×4），seq_len=384显存较大
-LEARNING_RATE = 1.2e-4    # 3e-5 × 4
-MAX_SEQ_LEN = 384
-DOC_STRIDE = 128       # 长文档滑动窗口步长
+EPOCHS = float(os.environ.get("EPOCHS", "2"))
+BATCH_SIZE = int(os.environ.get("BATCH_SIZE", "128"))          # 线性缩放：原32 → 128（×4），seq_len=384显存较大
+LEARNING_RATE = float(os.environ.get("LEARNING_RATE", "1.2e-4"))    # 3e-5 × 4
+MAX_SEQ_LEN = int(os.environ.get("MAX_SEQ_LEN", "384"))
+DOC_STRIDE = int(os.environ.get("DOC_STRIDE", "128"))       # 长文档滑动窗口步长
+MAX_STEPS = int(os.environ.get("MAX_STEPS", "0"))
+SMOKE_MAX_SAMPLES = int(os.environ.get("SMOKE_MAX_SAMPLES", "0"))
 NULL_SCORE_DIFF_THRESHOLD = 0.0   # 无答案判断阈值（论文默认值）
 OUTPUT_DIR = os.path.join(config.OUTPUT_BASE, "squad2")
 LOG_DIR = os.path.join(config.LOG_BASE, "squad2")
 
 # ── 1. 加载数据集 ─────────────────────────────────────────────────────────
 print("加载 SQuAD v2.0 数据集...")
-dataset = load_dataset("rajpurkar/squad_v2")
+dataset = None
+last_error = None
+for ds_name in ("rajpurkar/squad_v2", "squad_v2"):
+    try:
+        dataset = load_dataset(ds_name)
+        print(f"使用数据集源: {ds_name}")
+        break
+    except Exception as e:
+        last_error = e
+        print(f"加载失败({ds_name}): {type(e).__name__}: {e}")
+if dataset is None:
+    raise RuntimeError(f"SQuAD v2.0 加载失败，最后错误: {last_error}")
+if SMOKE_MAX_SAMPLES > 0:
+    for split in dataset.keys():
+        keep = min(SMOKE_MAX_SAMPLES, len(dataset[split]))
+        dataset[split] = dataset[split].select(range(keep))
+    print(f"SMOKE 模式：每个 split 仅保留前 {SMOKE_MAX_SAMPLES} 条样本")
 print(dataset)
 
 # ── 2. 加载 Tokenizer ────────────────────────────────────────────────────
@@ -243,9 +261,10 @@ training_args = TrainingArguments(
     weight_decay=0.01,
     warmup_steps=200,
     dataloader_num_workers=4,
-    eval_strategy="epoch",
+    evaluation_strategy="epoch",
     save_strategy="epoch",
     logging_steps=100,
+    max_steps=MAX_STEPS if MAX_STEPS > 0 else -1,
     fp16=True,
     report_to="none",
 )
@@ -256,7 +275,7 @@ trainer = Trainer(
     args=training_args,
     train_dataset=train_dataset,
     eval_dataset=eval_dataset.remove_columns(["example_id", "offset_mapping"]),
-    processing_class=tokenizer,
+    tokenizer=tokenizer,
     data_collator=DefaultDataCollator(),
 )
 

@@ -100,6 +100,19 @@ def _parse_args(
     return tuple(parsed_args)
 
 
+def _sanitize_help_strings(parser: "HfArgumentParser") -> None:
+    """Work around argparse %-format crashes caused by upstream help strings."""
+    formatter = parser._get_formatter()
+    for action in parser._actions:
+        if not isinstance(action.help, str):
+            continue
+
+        try:
+            formatter._expand_help(action)
+        except TypeError:
+            action.help = action.help.replace("%", "%%")
+
+
 def _verify_trackio_args(training_args: "TrainingArguments") -> None:
     """Validates Trackio-specific arguments.
 
@@ -240,12 +253,14 @@ def _check_extra_dependencies(
 
 def _parse_train_args(args: dict[str, Any] | list[str] | None = None) -> _TRAIN_CLS:
     parser = HfArgumentParser(_TRAIN_ARGS)
+    _sanitize_help_strings(parser)
     allow_extra_keys = is_env_enabled("ALLOW_EXTRA_ARGS")
     return _parse_args(parser, args, allow_extra_keys=allow_extra_keys)
 
 
 def _parse_train_mca_args(args: dict[str, Any] | list[str] | None = None) -> _TRAIN_MCA_CLS:
     parser = HfArgumentParser(_TRAIN_MCA_ARGS)
+    _sanitize_help_strings(parser)
     allow_extra_keys = is_env_enabled("ALLOW_EXTRA_ARGS")
     model_args, data_args, training_args, finetuning_args, generating_args = _parse_args(
         parser, args, allow_extra_keys=allow_extra_keys
@@ -267,18 +282,21 @@ def _configure_mca_training_args(training_args, data_args, finetuning_args) -> N
 
 def _parse_infer_args(args: dict[str, Any] | list[str] | None = None) -> _INFER_CLS:
     parser = HfArgumentParser(_INFER_ARGS)
+    _sanitize_help_strings(parser)
     allow_extra_keys = is_env_enabled("ALLOW_EXTRA_ARGS")
     return _parse_args(parser, args, allow_extra_keys=allow_extra_keys)
 
 
 def _parse_eval_args(args: dict[str, Any] | list[str] | None = None) -> _EVAL_CLS:
     parser = HfArgumentParser(_EVAL_ARGS)
+    _sanitize_help_strings(parser)
     allow_extra_keys = is_env_enabled("ALLOW_EXTRA_ARGS")
     return _parse_args(parser, args, allow_extra_keys=allow_extra_keys)
 
 
 def get_ray_args(args: dict[str, Any] | list[str] | None = None) -> RayArguments:
     parser = HfArgumentParser(RayArguments)
+    _sanitize_help_strings(parser)
     (ray_args,) = _parse_args(parser, args, allow_extra_keys=True)
     return ray_args
 
